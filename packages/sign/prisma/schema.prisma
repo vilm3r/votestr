@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client-sign"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("SQLITE_PATH")
+}
+
+model Poll {
+  id              String   @id
+  info            String
+  ends            DateTime
+  auths           Auth[]
+  archived        Boolean  @default(false)
+}
+
+model Auth {
+  id              Int             @id @default(autoincrement())
+  pubkey          String
+  signed_auth     String
+  payload         String
+  poll            Poll            @relation(fields: [poll_id], references: [id])
+  poll_id         String
+  @@unique([pubkey, poll_id])
+}

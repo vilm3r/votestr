@@ -1,0 +1,20 @@
+@tailwind components;
+@tailwind base;
+@tailwind utilities;
+
+body {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+input[type='button'] {
+  border: none;
+  outline: none;
+  background: none;
+}
+
+input[type='button']:focus {
+  border: none;
+  outline: none;
+  background: none;
+}

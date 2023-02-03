@@ -1,0 +1,19 @@
+sequenceDiagram
+    actor Alice
+    Alice->>Web: Render poll page
+    Web->>Nostr Relay: Get poll event
+    Web-)Sign: Check for existing auth
+    activate Sign
+    Sign->>Nostr Relay: Get poll event
+    Sign-->>Web: No auth
+    deactivate Sign
+    Alice-)Web: Click Submit Vote
+    activate Sign
+    Web->>Sign: Get auth + vote signatures<br> and store encrypted nonce + r
+    deactivate Sign
+    activate Tally
+    Web->>Tally: Submit vote w/ auth + vote signatures
+    Tally->>Nostr Relay: Get poll event
+    Tally-->>Web: Poll results
+    deactivate Tally
+    Web-)Alice: Show poll results

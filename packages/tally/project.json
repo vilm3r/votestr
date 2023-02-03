@@ -1,0 +1,120 @@
+{
+  "name": "tally",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/tally/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/packages/tally",
+        "main": "packages/tally/src/main.ts",
+        "tsConfig": "packages/tally/tsconfig.app.json",
+        "webpackConfig": "webpack.config.js"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "fileReplacements": [
+            {
+              "replace": "packages/tally/src/environments/environment.ts",
+              "with": "packages/tally/src/environments/environment.prod.ts"
+            }
+          ]
+        }
+      }
+    },
+    "build-worker": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/packages/tally-worker",
+        "main": "packages/tally/src/worker.ts",
+        "tsConfig": "packages/tally/tsconfig.app.json",
+        "webpackConfig": "webpack.config.js"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "fileReplacements": [
+            {
+              "replace": "packages/tally/src/environments/environment.ts",
+              "with": "packages/tally/src/environments/environment.prod.ts"
+            }
+          ]
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nrwl/js:node",
+      "options": {
+        "buildTarget": "tally:build"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "tally:build:production"
+        }
+      }
+    },
+    "serve-worker": {
+      "executor": "@nrwl/js:node",
+      "options": {
+        "buildTarget": "tally:build-worker"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "tally:build-worker:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/tally/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/tally/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "migrate-save": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma migrate dev",
+        "cwd": "packages/tally"
+      }
+    },
+    "migrate-up": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma migrate",
+        "cwd": "packages/tally"
+      }
+    },
+    "gen-client": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma generate",
+        "cwd": "packages/tally"
+      }
+    }
+  },
+  "tags": []
+}

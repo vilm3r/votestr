@@ -1,0 +1,28 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "strict": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2017", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "typeRoots": ["."],
+    "paths": {
+      "@admin-env/*": ["apps/admin/src/environments/*"],
+      "@admin/*": ["apps/admin/src/app/*"],
+      "@portal-env/*": ["apps/portal/src/environments/*"],
+      "@portal/*": ["apps/portal/src/app/*"],
+      "@votestr-libs/*": ["libs/*"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

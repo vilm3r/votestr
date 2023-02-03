@@ -1,0 +1,120 @@
+{
+  "name": "sign",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/sign/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/packages/sign",
+        "main": "packages/sign/src/main.ts",
+        "tsConfig": "packages/sign/tsconfig.app.json",
+        "webpackConfig": "webpack.config.js"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "fileReplacements": [
+            {
+              "replace": "packages/sign/src/environments/environment.ts",
+              "with": "packages/sign/src/environments/environment.prod.ts"
+            }
+          ]
+        }
+      }
+    },
+    "build-worker": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/packages/sign-worker",
+        "main": "packages/sign/src/worker.ts",
+        "tsConfig": "packages/sign/tsconfig.app.json",
+        "webpackConfig": "webpack.config.js"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "fileReplacements": [
+            {
+              "replace": "packages/sign/src/environments/environment.ts",
+              "with": "packages/sign/src/environments/environment.prod.ts"
+            }
+          ]
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nrwl/js:node",
+      "options": {
+        "buildTarget": "sign:build"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "sign:build:production"
+        }
+      }
+    },
+    "serve-worker": {
+      "executor": "@nrwl/js:node",
+      "options": {
+        "buildTarget": "sign:build-worker"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "sign:build-worker:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/sign/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/sign/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "migrate-save": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma migrate dev",
+        "cwd": "packages/sign"
+      }
+    },
+    "migrate-up": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma migrate",
+        "cwd": "packages/sign"
+      }
+    },
+    "gen-client": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma generate",
+        "cwd": "packages/sign"
+      }
+    }
+  },
+  "tags": []
+}

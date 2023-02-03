@@ -1,0 +1,48 @@
+FROM node:19-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM node:19-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run tally-build
+
+FROM node:19-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV production
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodejs
+
+COPY --from=builder --chown=nodejs:nodejs /app/packages/tally/run.sh ./
+RUN chmod +x ./run.sh
+
+# tally
+COPY --from=builder --chown=nodejs:nodejs /app/dist/packages/tally/ /app/tally
+WORKDIR /app/tally
+COPY --from=builder --chown=nodejs:nodejs /app/packages/tally/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder --chown=nodejs:nodejs /app/packages/tally/prisma/migrations ./prisma/migrations
+RUN npm i
+RUN npx prisma generate
+
+#tally-worker
+COPY --from=builder --chown=nodejs:nodejs /app/dist/packages/tally-worker/ /app/tally-worker
+WORKDIR /app/tally-worker
+COPY --from=builder --chown=nodejs:nodejs /app/packages/tally/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder --chown=nodejs:nodejs /app/packages/tally/prisma/migrations ./prisma/migrations
+RUN npm i
+RUN npx prisma generate
+
+WORKDIR /app
+RUN mkdir /home/nodejs/.votestr
+RUN chown -R nodejs:nodejs /home/nodejs/.votestr
+
+USER nodejs
+EXPOSE 3333
+ENV PORT 3333
+ENV SQLITE_PATH file:/home/nodejs/.votestr/sqlite.db
+ENV ARCHIVE_PATH /home/nodejs/.votestr/archive
+VOLUME /home/nodejs/.votestr
+ENTRYPOINT ["sh","/app/run.sh"]

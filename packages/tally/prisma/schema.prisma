@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client-tally"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("SQLITE_PATH")
+}
+
+model Poll {
+  id              String   @id
+  info            String
+  ends            DateTime
+  votes           Vote[]
+  results         String?
+  pubkey_auth     String
+  pubkey_vote     String
+  archived        Boolean  @default(false)
+}
+
+model Vote {
+  id              Int             @id @default(autoincrement())
+  nonce           String
+  choice          String
+  unblinded_auth  String?
+  unblinded_vote  String?
+  timestamp       String?
+  poll            Poll            @relation(fields: [poll_id], references: [id])
+  poll_id         String
+  created_at      DateTime        @default(now())
+  @@unique([nonce, poll_id])
+}
