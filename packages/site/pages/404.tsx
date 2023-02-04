@@ -10,12 +10,33 @@ const FourOhFour = () => (
       <meta
         name="description"
         content="Create your next poll on Nostr with Votestr!"
-      ></meta>
+      />
+      <link
+        rel="apple-touch-icon"
+        sizes="180x180"
+        href="/apple-touch-icon.png"
+      />
+      <link
+        rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="/favicon-32x32.png"
+      />
+      <link
+        rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="/favicon-16x16.png"
+      />
+      <link rel="manifest" href="/site.webmanifest" />
+      <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+      <meta name="msapplication-TileColor" content="#da532c" />
+      <meta name="theme-color" content="#ffffff" />
     </Head>
     <Header show_create_cta={false} />
     <div className="px-4 pt-20">
       <div className="text-center">
-        <h1 className="font-black text-gray-200 text-9xl">404</h1>
+        <h1 className="text-9xl font-black text-gray-200">404</h1>
 
         <p className="text-2xl font-bold tracking-tight sm:text-4xl">Uh-oh!</p>
 
@@ -23,7 +44,7 @@ const FourOhFour = () => (
 
         <Link
           href="/"
-          className="inline-block px-5 py-3 mt-6 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 focus:outline-none focus:ring"
+          className="mt-6 inline-block rounded bg-indigo-600 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring"
         >
           Create your own poll
         </Link>

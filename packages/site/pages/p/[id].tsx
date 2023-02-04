@@ -370,6 +370,27 @@ export function PollPage({ poll, creator }: PollPageProps) {
         <title>{`Votestr | ${poll.content.title}`}</title>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />
         <meta name="description" content={`${poll.content.title}`}></meta>
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/apple-touch-icon.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="/favicon-32x32.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="/favicon-16x16.png"
+        />
+        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+        <meta name="msapplication-TileColor" content="#da532c" />
+        <meta name="theme-color" content="#ffffff" />
       </Head>
       <Header />
       <ExtensionWarning
@@ -468,7 +489,28 @@ const NotFoundPage = () => (
       <meta
         name="description"
         content="Create your next poll on Nostr with Votestr!"
-      ></meta>
+      />
+      <link
+        rel="apple-touch-icon"
+        sizes="180x180"
+        href="/apple-touch-icon.png"
+      />
+      <link
+        rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="/favicon-32x32.png"
+      />
+      <link
+        rel="icon"
+        type="image/png"
+        sizes="16x16"
+        href="/favicon-16x16.png"
+      />
+      <link rel="manifest" href="/site.webmanifest" />
+      <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
+      <meta name="msapplication-TileColor" content="#da532c" />
+      <meta name="theme-color" content="#ffffff" />
     </Head>
     <Header show_create_cta={false} />
     <div className="px-4 pt-20">
