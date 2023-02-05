@@ -32,6 +32,7 @@ import Header from '../../components/Header';
 import ExtensionWarning from '../../components/ExtensionWarning';
 import VoteResultsRanked from '../../components/VoteResultsRanked';
 import VoteResultsSimple from '../../components/VoteResultsSimple';
+import LoadingCard from 'packages/site/components/LoadingCard';
 
 const getVote = async (poll_id: string, tally: string) =>
   (
@@ -138,6 +139,9 @@ const waitForNostr = async (wait: number): Promise<void> => {
   return await waitForNostr(wait - 50);
 };
 
+const hasPollEnded = (poll: EventPoll) =>
+  new Date(poll.content.ends).getTime() < Date.now();
+
 export type TallyDataType = {
   results?: { [_: string]: number };
   total?: number;
@@ -174,23 +178,30 @@ export function PollPage({ poll, creator }: PollPageProps) {
     created_at: undefined,
     total: undefined,
   });
-  const [show_extension_warning, setShowExtensionWarning] = useState(false);
+  const [page_state, setPageState] = useState<
+    'loading' | 'ready' | 'extension'
+  >('loading');
 
   useEffect(() => {
     (async () => {
-      await waitForNostr(300);
+      hasPollEnded(poll) ? await waitForNostr(300) : await waitForNostr(300);
       switch (true) {
         // prompt user to install extension
-        case !(window as any).nostr &&
-          new Date(poll.content.ends).getTime() > Date.now(): {
-          console.log('poll valid no extension');
-          return setShowExtensionWarning(true);
+        case !(window as any).nostr && !hasPollEnded(poll): {
+          return setPageState('extension');
         }
         // poll has ended so just show results
-        case !(window as any).nostr &&
-          new Date(poll.content.ends).getTime() < Date.now(): {
+        case !(window as any).nostr && hasPollEnded(poll): {
           const results = await getVote(poll.id, poll.content.tally);
+          setPageState('ready');
           return setTallyData((_) => results);
+        }
+        // grab results while fetching
+        case hasPollEnded(poll): {
+          getVote(poll.id, poll.content.tally).then((results) => {
+            setTallyData((_) => results);
+            setPageState('ready');
+          });
         }
         // normal auth flow
         default: {
@@ -215,16 +226,18 @@ export function PollPage({ poll, creator }: PollPageProps) {
           );
           // we haven't voted yet
           if (!auth_res?.payload) {
-            if (new Date(poll.content.ends).getTime() > Date.now()) {
-              return (nostr.current = {
+            if (!hasPollEnded(poll)) {
+              nostr.current = {
                 ...nostr.current,
                 pub,
                 sign_auth_key,
                 sign_vote_key,
-              });
+              };
+              return setPageState('ready');
             }
             // poll has ended
             const results = await getVote(poll.id, poll.content.tally);
+            setPageState('ready');
             return setTallyData((_) => results);
           }
           const saved = JSON.parse(
@@ -247,13 +260,14 @@ export function PollPage({ poll, creator }: PollPageProps) {
             sign_vote_key,
           };
           setTallyData((_) => results);
+          setPageState('ready');
         }
       }
     })();
   }, [poll]);
 
   async function clickVote(choice: string) {
-    if (!(window as any).nostr) return setShowExtensionWarning(true);
+    if (!(window as any).nostr) return setPageState('extension');
     let sig_event;
     let vote;
     const timestamp = new Date().toISOString();
@@ -394,8 +408,8 @@ export function PollPage({ poll, creator }: PollPageProps) {
       </Head>
       <Header />
       <ExtensionWarning
-        open={show_extension_warning}
-        handleClose={() => setShowExtensionWarning(false)}
+        open={page_state === 'extension'}
+        handleClose={() => setPageState('ready')}
       />
       <div className="m-auto max-w-3xl p-10">
         <div>
@@ -404,14 +418,16 @@ export function PollPage({ poll, creator }: PollPageProps) {
           )}
           <h1 className="pb-5 text-3xl font-bold">{poll.content.title}</h1>
         </div>
+        <div className={`${page_state === 'loading' ? 'block' : 'hidden'}`}>
+          {poll.content.choices.map((_, i) => (
+            <LoadingCard key={i} />
+          ))}
+        </div>
         {poll.content.options.type === 'ranked' && (
-          <>
+          <div className={`${page_state === 'loading' ? 'hidden' : 'block'} }`}>
             <div
               className={`${
-                tally_data.results ||
-                Date.now() > new Date(poll.content.ends).getTime()
-                  ? 'hidden'
-                  : 'block'
+                tally_data.results || hasPollEnded(poll) ? 'hidden' : 'block'
               }`}
             >
               <DynamicVoteChoiceRanked
@@ -421,10 +437,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
             </div>
             <div
               className={`${
-                tally_data.results ||
-                Date.now() > new Date(poll.content.ends).getTime()
-                  ? 'block'
-                  : 'hidden'
+                tally_data.results || hasPollEnded(poll) ? 'block' : 'hidden'
               }`}
             >
               <VoteResultsRanked
@@ -438,16 +451,13 @@ export function PollPage({ poll, creator }: PollPageProps) {
                 }}
               />
             </div>
-          </>
+          </div>
         )}
         {poll.content.options.type === 'simple' && (
-          <>
+          <div className={`${page_state === 'loading' ? 'hidden' : 'block'} }`}>
             <div
               className={`${
-                tally_data.results ||
-                Date.now() > new Date(poll.content.ends).getTime()
-                  ? 'hidden'
-                  : 'block'
+                tally_data.results || hasPollEnded(poll) ? 'hidden' : 'block'
               }`}
             >
               <DynamicVoteChoiceSimple
@@ -457,10 +467,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
             </div>
             <div
               className={`${
-                tally_data.results ||
-                Date.now() > new Date(poll.content.ends).getTime()
-                  ? 'block'
-                  : 'hidden'
+                tally_data.results || hasPollEnded(poll) ? 'block' : 'hidden'
               }`}
             >
               <VoteResultsSimple
@@ -474,7 +481,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
                 }}
               />
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

@@ -127,7 +127,7 @@ export function Index({ config }: IndexProps) {
 
   useEffect(() => {
     (async () => {
-      await waitForNostr(300);
+      await waitForNostr(2000);
       try {
         await (window as any).nostr.enable();
       } catch (ex) {
