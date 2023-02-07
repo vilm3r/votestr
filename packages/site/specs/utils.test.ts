@@ -1,6 +1,6 @@
 import * as utils from '@votestr-libs/utils';
 
-describe('Covert vote numbers to percent', () => {
+describe('Convert vote numbers to percent', () => {
   test('it should return vote results as percents', () => {
     const input: [any, number] = [{ '1': 100, '2': 50 }, 150];
 
