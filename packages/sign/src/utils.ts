@@ -17,6 +17,7 @@ const zod_poll = z.object({
   id: zod_event_poll.shape.id,
   ends: z.date(),
   info: zod_event_poll.shape.content,
+  pubkey: z.string(),
 });
 
 export type Poll = z.infer<typeof zod_poll>;
@@ -72,7 +73,7 @@ export const getOrFetchPollData = async (poll_id: string) => {
   if (!event) {
     throw new Error(`Poll id ${poll_id} not found`);
   }
-  if (event.content.sign !== `https://${DOMAIN}`) {
+  if (event.content.sign !== `${DOMAIN}`) {
     throw new Error(`Poll id ${poll_id} sign domain mismatch`);
   }
   await savePoll(event);

@@ -22,12 +22,18 @@ export const zod_event_poll = zod_event
       title: z.string().min(1).max(100),
       choices: z.string().min(1).max(40).array().min(2).max(10),
       options: z.object({
-        type: z.literal('simple').or(z.literal('ranked')),
-        randomize: z.boolean(),
-        percent: z.boolean(),
-        secret: z.boolean(),
-        show_creator: z.boolean(),
-        modify_minutes: z.number().int().min(-1).max(60),
+        type: z.literal('simple').or(z.literal('ranked')).default('simple'),
+        randomize: z.boolean().default(true),
+        percent: z.boolean().default(true),
+        secret: z.boolean().default(false),
+        show_creator: z.boolean().default(true),
+        modify_minutes: z.number().int().min(-1).max(60).default(0),
+        show_results: z
+          .literal('after-vote')
+          .or(z.literal('after-poll'))
+          .or(z.literal('creator'))
+          .or(z.literal('always'))
+          .default('after-vote'),
       }),
       sign: z.string().url(),
       tally: z.string().url(),
@@ -298,7 +304,7 @@ export const parsePollEvent = (event: Event) => {
     event_poll.created_at
   );
   if (!valid.success || !valid_ends) return undefined;
-  return event_poll as EventPoll;
+  return valid.data;
 };
 
 export const getPollCreator = (

@@ -28,6 +28,7 @@ const zod_poll = z.object({
   ends: z.date(),
   info: zod_event_poll.shape.content,
   archived: z.boolean(),
+  pubkey: z.string(),
   pubkey_auth: z.string(),
   pubkey_vote: z.string(),
 });
@@ -50,7 +51,7 @@ export const getOrFetchPollData = async (poll_id: string) => {
   if (!event || !pubkey_auth || !pubkey_vote) {
     throw new Error(`Poll id ${poll_id} not found`);
   }
-  if (event.content.tally !== `https://${DOMAIN}`) {
+  if (event.content.tally !== `${DOMAIN}`) {
     throw new Error(`Poll id ${poll_id} tally domain mismatch`);
   }
   await prisma.savePoll(event, pubkey_auth, pubkey_vote);

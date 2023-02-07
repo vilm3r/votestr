@@ -22,6 +22,13 @@ const getVoteResults = async (poll: Poll) => {
       results: Object.fromEntries(
         poll.info.choices.map((_, i) => [intToBs58(i), 0])
       ),
+      ...(poll.info.options.type === 'ranked'
+        ? {
+            first_round: Object.fromEntries(
+              poll.info.choices.map((_, i) => [intToBs58(i), 0])
+            ),
+          }
+        : {}),
       total: 0,
     };
 
@@ -35,6 +42,7 @@ const getVoteResults = async (poll: Poll) => {
   }
   const votes = await prisma.getVotes(poll.id);
   const tmp = calculatePollResults(poll.info.options.type, votes);
+  console.log(tmp);
   return {
     total: tmp.total,
     results: formatPollResults(
@@ -57,6 +65,12 @@ const getVoteResults = async (poll: Poll) => {
 };
 
 export const get = async (poll: Poll, res: Response) => {
+  if (
+    poll.info.options.show_results !== 'always' &&
+    Date.now() < new Date(poll.info.ends).getTime()
+  ) {
+    return res.status(401).send();
+  }
   const results = await getVoteResults(poll);
   return res.send(results);
 };
@@ -67,7 +81,17 @@ export const cast = async (poll: Poll, event: EventTallyReq, res: Response) => {
 
   switch (event.content.type) {
     case 'results': {
-      if (Date.now() < poll_end_time && (!vote || poll.info.options.secret)) {
+      if (
+        Date.now() < poll_end_time &&
+        poll.info.options.show_results !== 'creator' &&
+        (!vote || poll.info.options.secret)
+      ) {
+        return res.status(403).send();
+      }
+      if (
+        poll.info.options.show_results === 'creator' &&
+        event.pubkey !== poll.pubkey
+      ) {
         return res.status(403).send();
       }
       const results = await getVoteResults(poll);

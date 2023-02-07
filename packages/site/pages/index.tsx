@@ -77,6 +77,7 @@ type PollState = {
     secret: boolean;
     show_creator: boolean;
     modify_minutes: number;
+    show_results: string;
   };
   ends: string;
   sign: string;
@@ -103,6 +104,7 @@ export function Index({ config }: IndexProps) {
       secret: false,
       show_creator: true,
       modify_minutes: 0,
+      show_results: 'after-vote',
     },
     ends: getPollEnd(1),
     sign: config.sign,
@@ -165,7 +167,7 @@ export function Index({ config }: IndexProps) {
 
   type FlipOptions = Exclude<
     keyof PollState['options'],
-    'type' | 'modify_minutes'
+    'type' | 'modify_minutes' | 'show_results'
   >;
 
   function flipSwitch(key: FlipOptions) {
@@ -348,6 +350,23 @@ export function Index({ config }: IndexProps) {
                     onChange={(value: number) =>
                       setPollInfo((draft) => {
                         draft.options.modify_minutes = value;
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Tabs
+                    label="Show results"
+                    tabs={[
+                      ['after-vote', 'After vote'],
+                      ['after-poll', 'Poll end'],
+                      ['creator', 'Creator'],
+                      ['always', 'Always'],
+                    ]}
+                    value={poll_info.options.show_results}
+                    onChange={(value: string) =>
+                      setPollInfo((draft) => {
+                        draft.options.show_results = value;
                       })
                     }
                   />

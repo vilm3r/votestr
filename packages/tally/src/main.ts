@@ -16,10 +16,6 @@ app.get('/api/poll/:poll_id', async (req, res) => {
     if (!valid.success) return res.status(400).send();
     const poll = await getOrFetchPollData(poll_id);
     if (!poll) return res.status(404).send();
-
-    if (Date.now() < new Date(poll.info.ends).getTime()) {
-      return res.status(401).send();
-    }
     return await get(poll, res);
   } catch (ex) {
     res.status(500).send();

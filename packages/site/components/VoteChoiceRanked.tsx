@@ -8,6 +8,7 @@ import Button from './Button';
 type VoteChoiceRankedProps = {
   poll: EventPoll;
   onClickVote: (_: string) => void;
+  onClickResults: () => void;
 };
 
 const choicesToVoteString = (choices: { label: string; num: number }[]) =>
@@ -20,7 +21,11 @@ const orderChoices = (randomize: boolean, choices: string[]) =>
       .sort((a, b) => (randomize ? a.rand - b.rand : a.num - b.num)),
   ].map(({ label, num }) => ({ label, num }));
 
-const VoteChoiceRanked = ({ poll, onClickVote }: VoteChoiceRankedProps) => {
+const VoteChoiceRanked = ({
+  poll,
+  onClickVote,
+  onClickResults,
+}: VoteChoiceRankedProps) => {
   const [choices, setChoices] = useState(
     orderChoices(poll.content.options.randomize, poll.content.choices)
   );
@@ -73,13 +78,17 @@ const VoteChoiceRanked = ({ poll, onClickVote }: VoteChoiceRankedProps) => {
           Submit Vote
         </Button>
 
-        <Button
-          className="text-xl"
-          variant="secondary"
-          onClick={() => onClickVote('0')}
-        >
-          Show Results
-        </Button>
+        {['always', 'after-vote'].includes(
+          poll.content.options.show_results
+        ) && (
+          <Button
+            className="text-xl"
+            variant="secondary"
+            onClick={onClickResults}
+          >
+            Show Results
+          </Button>
+        )}
       </div>
     </>
   );

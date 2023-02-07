@@ -4,6 +4,7 @@ CREATE TABLE "Poll" (
     "info" TEXT NOT NULL,
     "ends" DATETIME NOT NULL,
     "results" TEXT,
+    "pubkey" TEXT NOT NULL,
     "pubkey_auth" TEXT NOT NULL,
     "pubkey_vote" TEXT NOT NULL,
     "archived" BOOLEAN NOT NULL DEFAULT false

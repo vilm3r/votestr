@@ -32,6 +32,7 @@ export const getPoll = (poll_id: string) =>
         id: true,
         info: true,
         ends: true,
+        pubkey: true,
       },
       where: {
         id: poll_id,
@@ -43,6 +44,7 @@ export const savePoll = (poll: EventPoll) =>
   prisma.poll.create({
     data: {
       id: poll.id,
+      pubkey: poll.pubkey,
       info: JSON.stringify(poll.content),
       ends: poll.content.ends,
     },

@@ -17,6 +17,7 @@ model Poll {
   ends            DateTime
   votes           Vote[]
   results         String?
+  pubkey          String
   pubkey_auth     String
   pubkey_vote     String
   archived        Boolean  @default(false)

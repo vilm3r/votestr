@@ -15,6 +15,7 @@ model Poll {
   id              String   @id
   info            String
   ends            DateTime
+  pubkey          String
   auths           Auth[]
   archived        Boolean  @default(false)
 }

@@ -3,6 +3,7 @@ CREATE TABLE "Poll" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "info" TEXT NOT NULL,
     "ends" DATETIME NOT NULL,
+    "pubkey" TEXT NOT NULL,
     "archived" BOOLEAN NOT NULL DEFAULT false
 );
 

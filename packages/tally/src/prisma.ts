@@ -11,6 +11,7 @@ export const getPoll = (poll_id: string) =>
         info: true,
         ends: true,
         archived: true,
+        pubkey: true,
         pubkey_auth: true,
         pubkey_vote: true,
       },
@@ -126,6 +127,7 @@ export const savePoll = (
   prisma.poll.create({
     data: {
       id: poll.id,
+      pubkey: poll.pubkey,
       info: JSON.stringify(poll.content),
       ends: poll.content.ends,
       pubkey_auth,

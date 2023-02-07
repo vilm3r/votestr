@@ -1,6 +1,7 @@
 import * as bs58 from 'bs58';
 import { BigInteger } from 'jsbn';
 import produce from 'immer';
+import { EventPoll } from './nostr';
 
 export const bigToBs58 = (big: any) => bs58.encode(big.toByteArray());
 
@@ -62,6 +63,9 @@ export const getLocalString = (date: Date) =>
     .slice(0, 2)
     .join(':')}`;
 
+export const hasPollEnded = (poll: EventPoll) =>
+  new Date(poll.content.ends).getTime() < Date.now();
+
 export default {
   bigToBs58,
   bs58ToBig,
@@ -70,4 +74,5 @@ export default {
   getLocalISOString,
   group,
   timeout,
+  hasPollEnded,
 };

@@ -30,9 +30,9 @@ import PollCreator from '../../components/PollCreator';
 import Link from 'next/link';
 import Header from '../../components/Header';
 import ExtensionWarning from '../../components/ExtensionWarning';
-import VoteResultsRanked from '../../components/VoteResultsRanked';
-import VoteResultsSimple from '../../components/VoteResultsSimple';
 import LoadingCard from 'packages/site/components/LoadingCard';
+import ResultsWarning from 'packages/site/components/ResultsWarning';
+import VoteResults from 'packages/site/components/VoteResults';
 
 const getVote = async (poll_id: string, tally: string) =>
   (
@@ -139,7 +139,7 @@ const waitForNostr = async (wait: number): Promise<void> => {
   return await waitForNostr(wait - 50);
 };
 
-const hasPollEnded = (poll: EventPoll) =>
+export const hasPollEnded = (poll: EventPoll) =>
   new Date(poll.content.ends).getTime() < Date.now();
 
 export type TallyDataType = {
@@ -165,7 +165,6 @@ type PollPageProps = {
 
 export function PollPage({ poll, creator }: PollPageProps) {
   const nostr = useRef<nostrRef>({
-    pub: undefined,
     nonce: undefined,
     signed_auth: undefined,
     sign_auth_key: undefined,
@@ -179,11 +178,18 @@ export function PollPage({ poll, creator }: PollPageProps) {
     total: undefined,
   });
   const [page_state, setPageState] = useState<
-    'loading' | 'ready' | 'extension'
+    'loading' | 'ready' | 'extension' | 'forfeit' | 'results'
   >('loading');
+  const [pub, setPub] = useState<string | undefined>();
 
   useEffect(() => {
+    getVote(poll.id, poll.content.tally)
+      .then((results) => {
+        setTallyData((_) => results);
+      })
+      .catch(() => {});
     (async () => {
+      setPageState('loading');
       hasPollEnded(poll) ? await waitForNostr(300) : await waitForNostr(300);
       switch (true) {
         // prompt user to install extension
@@ -192,79 +198,99 @@ export function PollPage({ poll, creator }: PollPageProps) {
         }
         // poll has ended so just show results
         case !(window as any).nostr && hasPollEnded(poll): {
-          const results = await getVote(poll.id, poll.content.tally);
-          setPageState('ready');
-          return setTallyData((_) => results);
+          return setPageState('results');
         }
         // grab results while fetching
         case hasPollEnded(poll): {
-          getVote(poll.id, poll.content.tally).then((results) => {
-            setTallyData((_) => results);
-            setPageState('ready');
-          });
+          return setPageState('results');
         }
-        // normal auth flow
+        // get pubkey to trigger auth flow
         default: {
           try {
             await (window as any).nostr.enable();
           } catch (ex) {
             // suppress error in case nos2x
           }
-          const pub = await (window as any).nostr.getPublicKey();
-          const sign_auth_key = await getSignAuthPubkey(poll.content.sign);
-          const sign_vote_key = await getSignVotePubkey(poll.content.sign);
-          const nonce_req = getAuthPayloadReq(pub, poll.id);
-          const id = getEventHash(nonce_req);
-          const nonce_sig = await (window as any).nostr.signEvent({
-            ...nonce_req,
-            id,
-          });
-          const auth_res = await sendAuth(
-            poll.id,
-            poll.content.sign,
-            nonce_sig
-          );
-          // we haven't voted yet
-          if (!auth_res?.payload) {
-            if (!hasPollEnded(poll)) {
-              nostr.current = {
-                ...nostr.current,
-                pub,
-                sign_auth_key,
-                sign_vote_key,
-              };
-              return setPageState('ready');
-            }
-            // poll has ended
-            const results = await getVote(poll.id, poll.content.tally);
-            setPageState('ready');
-            return setTallyData((_) => results);
-          }
-          const saved = JSON.parse(
-            await (window as any).nostr.nip04.decrypt(pub, auth_res.payload)
-          );
-          const anon_priv = generatePrivateKey();
-          const anon_pub = getPublicKey(anon_priv);
-          const vote_req = getVoteResultsReq(anon_pub, saved.nonce, poll.id);
-          const event = {
-            ...vote_req,
-            id: getEventHash(vote_req),
-            sig: signEvent(vote_req, anon_priv),
-          };
-          const results = await sendVote(poll.id, poll.content.tally, event);
-          nostr.current = {
-            ...nostr.current,
-            pub,
-            nonce: saved.nonce,
-            sign_auth_key,
-            sign_vote_key,
-          };
-          setTallyData((_) => results);
-          setPageState('ready');
+          const pubkey = await (window as any).nostr.getPublicKey();
+          setPub(pubkey);
         }
       }
     })();
-  }, [poll]);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (pub == undefined) return;
+      const sign_auth_key = await getSignAuthPubkey(poll.content.sign);
+      const sign_vote_key = await getSignVotePubkey(poll.content.sign);
+      const nonce_req = getAuthPayloadReq(pub, poll.id);
+      const id = getEventHash(nonce_req);
+      const nonce_sig = await (window as any).nostr.signEvent({
+        ...nonce_req,
+        id,
+      });
+      const auth_res = await sendAuth(poll.id, poll.content.sign, nonce_sig);
+      // we haven't voted yet
+      if (!auth_res?.payload) {
+        if (hasPollEnded(poll)) {
+          return setPageState('results');
+        }
+        nostr.current = {
+          ...nostr.current,
+          pub,
+          sign_auth_key,
+          sign_vote_key,
+        };
+        return setPageState('ready');
+      }
+      const saved = JSON.parse(
+        await (window as any).nostr.nip04.decrypt(pub, auth_res.payload)
+      );
+      if (
+        poll.content.options.show_results === 'creator' &&
+        poll.pubkey !== pub
+      ) {
+        return setPageState('results');
+      }
+      if (
+        poll.content.options.show_results === 'creator' &&
+        poll.pubkey === pub
+      ) {
+        const vote_req = getVoteResultsReq(pub, saved.nonce, poll.id);
+        const id = getEventHash(vote_req);
+        const vote_sig = await (window as any).nostr.signEvent({
+          ...vote_req,
+          id,
+        });
+        const results = await sendVote(poll.id, poll.content.tally, vote_sig);
+        nostr.current = {
+          ...nostr.current,
+          nonce: saved.nonce,
+          sign_auth_key,
+          sign_vote_key,
+        };
+        setTallyData((_) => results);
+        return setPageState('results');
+      }
+      const anon_priv = generatePrivateKey();
+      const anon_pub = getPublicKey(anon_priv);
+      const vote_req = getVoteResultsReq(anon_pub, saved.nonce, poll.id);
+      const event = {
+        ...vote_req,
+        id: getEventHash(vote_req),
+        sig: signEvent(vote_req, anon_priv),
+      };
+      const results = await sendVote(poll.id, poll.content.tally, event);
+      nostr.current = {
+        ...nostr.current,
+        nonce: saved.nonce,
+        sign_auth_key,
+        sign_vote_key,
+      };
+      setTallyData((_) => results);
+      setPageState('results');
+    })();
+  }, [pub]);
 
   async function clickVote(choice: string) {
     if (!(window as any).nostr) return setPageState('extension');
@@ -293,14 +319,14 @@ export function PollPage({ poll, creator }: PollPageProps) {
         E: nostr.current.sign_vote_key.keyPair.e.toString(),
       });
       const payload = await (window as any).nostr.nip04.encrypt(
-        nostr.current.pub,
+        pub,
         JSON.stringify({
           r: bigToBs58(auth.r),
           nonce,
         })
       );
       const req = getAuthSignReq(
-        nostr.current.pub as string,
+        pub as string,
         poll.id,
         bigToBs58(auth.blinded),
         bigToBs58(vote.blinded),
@@ -323,7 +349,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
         E: nostr.current.sign_vote_key.keyPair.e.toString(),
       });
       const req = getAuthVoteReq(
-        nostr.current.pub as string,
+        pub as string,
         poll.id,
         bigToBs58(vote.blinded)
       );
@@ -335,7 +361,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
     }
     const auth = await sendAuth(poll.id, poll.content.sign, sig_event);
     const saved = JSON.parse(
-      await (window as any).nostr.nip04.decrypt(nostr.current.pub, auth.payload)
+      await (window as any).nostr.nip04.decrypt(pub, auth.payload)
     );
 
     const unblinded_auth = BlindSignature.unblind({
@@ -366,13 +392,8 @@ export function PollPage({ poll, creator }: PollPageProps) {
     };
     try {
       const results = await sendVote(poll.id, poll.content.tally, event);
-      return setTallyData((prev) => ({
-        ...prev,
-        results: results?.results ?? prev?.results,
-        choice: results?.choice ?? prev?.choice,
-        total: results?.total ?? prev?.total,
-        created_at: results?.created_at ?? prev?.created_at,
-      }));
+      setTallyData(results);
+      return setPageState('results');
     } catch (ex) {
       console.error(ex);
     }
@@ -411,6 +432,16 @@ export function PollPage({ poll, creator }: PollPageProps) {
         open={page_state === 'extension'}
         handleClose={() => setPageState('ready')}
       />
+      <ResultsWarning
+        open={page_state === 'forfeit'}
+        handleClose={() => {
+          setPageState('ready');
+        }}
+        handleOk={() => {
+          clickVote('0');
+          setPageState('ready');
+        }}
+      />
       <div className="m-auto max-w-3xl p-10">
         <div>
           {poll.content.options.show_creator && (
@@ -425,29 +456,26 @@ export function PollPage({ poll, creator }: PollPageProps) {
         </div>
         {poll.content.options.type === 'ranked' && (
           <div className={`${page_state === 'loading' ? 'hidden' : 'block'} }`}>
-            <div
-              className={`${
-                tally_data.results || hasPollEnded(poll) ? 'hidden' : 'block'
-              }`}
-            >
+            <div className={`${page_state === 'results' ? 'hidden' : 'block'}`}>
               <DynamicVoteChoiceRanked
                 poll={poll}
                 onClickVote={(choice: string) => clickVote(choice)}
+                onClickResults={() =>
+                  setPageState(
+                    poll.content.options.show_results === 'after-vote'
+                      ? 'forfeit'
+                      : 'results'
+                  )
+                }
               />
             </div>
-            <div
-              className={`${
-                tally_data.results || hasPollEnded(poll) ? 'block' : 'hidden'
-              }`}
-            >
-              <VoteResultsRanked
+            <div className={`${page_state === 'results' ? 'block' : 'hidden'}`}>
+              <VoteResults
                 poll={poll}
                 tally_data={tally_data}
+                pub={pub}
                 onClickRevote={() => {
-                  setTallyData((prev) => ({
-                    ...prev,
-                    results: undefined,
-                  }));
+                  setPageState('ready');
                 }}
               />
             </div>
@@ -455,29 +483,26 @@ export function PollPage({ poll, creator }: PollPageProps) {
         )}
         {poll.content.options.type === 'simple' && (
           <div className={`${page_state === 'loading' ? 'hidden' : 'block'} }`}>
-            <div
-              className={`${
-                tally_data.results || hasPollEnded(poll) ? 'hidden' : 'block'
-              }`}
-            >
+            <div className={`${page_state === 'results' ? 'hidden' : 'block'}`}>
               <DynamicVoteChoiceSimple
                 poll={poll}
                 onClickVote={(choice: string) => clickVote(choice)}
+                onClickResults={() =>
+                  setPageState(
+                    poll.content.options.show_results === 'after-vote'
+                      ? 'forfeit'
+                      : 'results'
+                  )
+                }
               />
             </div>
-            <div
-              className={`${
-                tally_data.results || hasPollEnded(poll) ? 'block' : 'hidden'
-              }`}
-            >
-              <VoteResultsSimple
+            <div className={`${page_state === 'results' ? 'block' : 'hidden'}`}>
+              <VoteResults
                 poll={poll}
                 tally_data={tally_data}
+                pub={pub}
                 onClickRevote={() => {
-                  setTallyData((prev) => ({
-                    ...prev,
-                    results: undefined,
-                  }));
+                  setPageState('ready');
                 }}
               />
             </div>

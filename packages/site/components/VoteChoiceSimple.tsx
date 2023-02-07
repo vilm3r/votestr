@@ -1,12 +1,13 @@
 import { intToBs58 } from '@votestr-libs/utils';
 import { useState } from 'react';
-import { EventPoll } from '@votestr-libs/nostr';
+import { EventPoll, Poll } from '@votestr-libs/nostr';
 import Button from './Button';
 import VoteButton from './VoteButton';
 
 type VoteChoiceSimpleProps = {
-  poll: EventPoll;
+  poll: Poll;
   onClickVote: (_: string) => void;
+  onClickResults: () => void;
 };
 
 const setChoices = (randomize: boolean, choices: string[]) => [
@@ -15,7 +16,11 @@ const setChoices = (randomize: boolean, choices: string[]) => [
     .sort((a, b) => (randomize ? a.rand - b.rand : a.num - b.num)),
 ];
 
-const VoteChoiceSimple = ({ poll, onClickVote }: VoteChoiceSimpleProps) => {
+const VoteChoiceSimple = ({
+  poll,
+  onClickVote,
+  onClickResults,
+}: VoteChoiceSimpleProps) => {
   const [choice, setChoice] = useState<number | undefined>();
   const [choices, _] = useState(
     setChoices(poll.content.options.randomize, poll.content.choices)
@@ -33,28 +38,25 @@ const VoteChoiceSimple = ({ poll, onClickVote }: VoteChoiceSimpleProps) => {
           clickVote={() => setChoice(num)}
         />
       ))}
-      <div className="pb-5">
-        <VoteButton
-          key={'Show results'}
-          label={'Show results'}
-          num={poll.content.choices.length}
-          selected={choice === poll.content.choices.length}
-          poll={poll}
-          clickVote={() => setChoice(-1)}
-        />
-      </div>
-      <div>
+      <div className="flex gap-5 pt-5">
         <Button
           className="text-xl"
-          disabled={choice == undefined}
-          onClick={() => {
-            console.log(`click choice: ${choice}`);
-            choice != undefined &&
-              onClickVote(choice === -1 ? '0' : intToBs58(choice));
-          }}
+          onClick={() => choice != undefined && onClickVote(intToBs58(choice))}
         >
           Submit Vote
         </Button>
+
+        {['always', 'after-vote'].includes(
+          poll.content.options.show_results
+        ) && (
+          <Button
+            className="text-xl"
+            variant="secondary"
+            onClick={onClickResults}
+          >
+            Show Results
+          </Button>
+        )}
       </div>
     </div>
   );
