@@ -98,30 +98,37 @@ export const getServerSideProps: any = async (
 ) => {
   const relay_url =
     process.env.NEXT_PUBLIC_RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net';
-  const raw_event = await getPollEvent(bech32ToHex(ctx.params?.id), relay_url);
-  const is_valid = isValidPollEvent(raw_event);
-  const poll_check = zod_event_poll.safeParse({
-    ...raw_event,
-    content: deserializePoll(raw_event?.content),
-  });
-  if (!is_valid || !poll_check.success) return { props: {} };
-  const poll = poll_check.data;
-  const creator = poll
-    ? await parseCreator(
-        await getPollCreator(raw_event.pubkey ?? '', relay_url),
-        raw_event.pubkey
-      )
-    : undefined;
-  const cache_age = poll ? 3600 : 0;
-  ctx.res.setHeader(
-    'Cache-Control',
-    `s-maxage=${cache_age}, stale-while-revalidate=${cache_age}`
-  );
-  const props = {
-    poll,
-    ...(creator?.pubkey && { creator }),
-  };
-  return { props };
+  try {
+    const raw_event = await getPollEvent(
+      bech32ToHex(ctx.params?.id),
+      relay_url
+    );
+    const is_valid = isValidPollEvent(raw_event);
+    const poll_check = zod_event_poll.safeParse({
+      ...raw_event,
+      content: deserializePoll(raw_event?.content),
+    });
+    if (!is_valid || !poll_check.success) return { props: {} };
+    const poll = poll_check.data;
+    const creator = poll
+      ? await parseCreator(
+          await getPollCreator(raw_event.pubkey ?? '', relay_url),
+          raw_event.pubkey
+        )
+      : undefined;
+    const cache_age = poll ? 3600 : 0;
+    ctx.res.setHeader(
+      'Cache-Control',
+      `s-maxage=${cache_age}, stale-while-revalidate=${cache_age}`
+    );
+    const props = {
+      poll,
+      ...(creator?.pubkey && { creator }),
+    };
+    return { props };
+  } catch (ex) {
+    return { props: {} };
+  }
 };
 
 const DynamicVoteChoiceRanked = dynamic(

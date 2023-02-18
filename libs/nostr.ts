@@ -2,6 +2,7 @@ import 'websocket-polyfill';
 import { relayInit, Event, getEventHash, nip04, Relay } from 'nostr-tools';
 import { bech32 } from 'bech32';
 import { z } from 'zod';
+import { timeout } from './utils';
 
 export const zod_event = z
   .object({
@@ -235,13 +236,16 @@ export const getPollEvent = (
           tmp = event;
         });
         sub.on('eose', () => {
-          if (!tmp) console.error(`Couldn't find poll info for ${poll_id}`);
+          if (!tmp) {
+            rej(`Couldn't find poll info for ${poll_id}`);
+          }
           res(tmp);
           sub.unsub();
           relay.close();
         });
       })
       .catch((e) => console.error(e));
+    timeout(5000).then(() => rej('nostr call timed out'));
   });
 
 const e = (x: string) => x.replace('|', '\\~').replace('^', '\\,');
