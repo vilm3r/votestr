@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client-sign';
-import { EventPoll, EventPollInfo, EventSignReq } from '@votestr-libs/nostr';
+import { EventPollInfo, EventSignReq } from '@votestr-libs/nostr';
+import { Event } from 'nostr-tools';
 
 const prisma = new PrismaClient();
 
@@ -38,15 +39,15 @@ export const getPoll = (poll_id: string) =>
         id: poll_id,
       },
     })
-    .then((x) => (x ? { ...x, info: JSON.parse(x.info) } : undefined));
+    .then();
 
-export const savePoll = (poll: EventPoll) =>
+export const savePoll = (poll: Event, ends: string) =>
   prisma.poll.create({
     data: {
-      id: poll.id,
+      id: poll.id as string,
       pubkey: poll.pubkey,
-      info: JSON.stringify(poll.content),
-      ends: poll.content.ends,
+      info: poll.content,
+      ends,
     },
   });
 

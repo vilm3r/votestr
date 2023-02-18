@@ -42,7 +42,6 @@ const getVoteResults = async (poll: Poll) => {
   }
   const votes = await prisma.getVotes(poll.id);
   const tmp = calculatePollResults(poll.info.options.type, votes);
-  console.log(tmp);
   return {
     total: tmp.total,
     results: formatPollResults(

@@ -1,25 +1,24 @@
 import { PrismaClient, Prisma } from '@prisma/client-tally';
-import { EventPoll, EventPollInfo } from '@votestr-libs/nostr';
+import { EventPollInfo } from '@votestr-libs/nostr';
+import { Event } from 'nostr-tools';
 
 const prisma = new PrismaClient();
 
 export const getPoll = (poll_id: string) =>
-  prisma.poll
-    .findFirst({
-      select: {
-        id: true,
-        info: true,
-        ends: true,
-        archived: true,
-        pubkey: true,
-        pubkey_auth: true,
-        pubkey_vote: true,
-      },
-      where: {
-        id: poll_id,
-      },
-    })
-    .then((x) => (x ? { ...x, info: JSON.parse(x.info) } : undefined));
+  prisma.poll.findFirst({
+    select: {
+      id: true,
+      info: true,
+      ends: true,
+      archived: true,
+      pubkey: true,
+      pubkey_auth: true,
+      pubkey_vote: true,
+    },
+    where: {
+      id: poll_id,
+    },
+  });
 
 export const getVote = (nonce: string, poll_id: string) =>
   prisma.vote.findFirst({
@@ -120,16 +119,17 @@ export const addPollPubkeys = (
   });
 
 export const savePoll = (
-  poll: EventPoll,
+  poll: Event,
+  ends: string,
   pubkey_auth: string,
   pubkey_vote: string
 ) =>
   prisma.poll.create({
     data: {
-      id: poll.id,
+      id: poll.id as string,
       pubkey: poll.pubkey,
-      info: JSON.stringify(poll.content),
-      ends: poll.content.ends,
+      info: poll.content,
+      ends,
       pubkey_auth,
       pubkey_vote,
     },

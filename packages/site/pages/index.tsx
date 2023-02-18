@@ -5,6 +5,7 @@ import {
   zod_event_poll,
   EventPollInfo,
   hexToBech32,
+  serializePoll,
 } from '@votestr-libs/nostr';
 import TextField from '../components/TextField';
 import DatePicker from '../components/DatePicker';
@@ -31,8 +32,12 @@ import { InferGetServerSidePropsType } from 'next';
 path.resolve('./next.config.js');
 // DO NOT REMOVE
 
-const getPollEnd = (days: number) =>
-  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+// const getPollEnd = (days: number) =>
+//   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+// for testing
+const getPollEnd = (minutes: number) =>
+  new Date(Date.now() + minutes * 60 * 1000).toISOString();
 
 const waitForNostr = async (wait: number): Promise<void> => {
   if ((window as any).nostr || wait === 0) return;
@@ -157,10 +162,7 @@ export function Index({ config }: IndexProps) {
     await relay.connect();
     const { id } = await publishAuthEvent(relay, {
       ...event,
-      content: JSON.stringify({
-        ...event.content,
-        // options: encodeOptions(event.content.options),
-      }),
+      content: serializePoll(event.content),
     });
     router.push(`/p/${hexToBech32(id, 'note')}`);
   }

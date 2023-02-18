@@ -18,6 +18,7 @@ app.get('/api/poll/:poll_id', async (req, res) => {
     if (!poll) return res.status(404).send();
     return await get(poll, res);
   } catch (ex) {
+    console.error(ex);
     res.status(500).send();
   }
 });

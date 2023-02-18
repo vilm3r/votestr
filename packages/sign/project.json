@@ -107,6 +107,14 @@
         "cwd": "packages/sign"
       }
     },
+    "db-push": {
+      "executor": "nx:run-commands",
+      "outputs": [],
+      "options": {
+        "command": "npx prisma db push",
+        "cwd": "packages/sign"
+      }
+    },
     "gen-client": {
       "executor": "nx:run-commands",
       "outputs": [],

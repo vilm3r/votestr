@@ -2,6 +2,7 @@ type ResultCardProps = {
   label: string;
   num: number;
   percent: number;
+  poll_type: 'simple' | 'ranked';
   count?: number;
   choice?: boolean;
   eliminated?: boolean;
@@ -13,6 +14,7 @@ const ResultCard = ({
   count,
   choice,
   num,
+  poll_type,
   eliminated = false,
 }: ResultCardProps) => {
   return (
@@ -20,13 +22,15 @@ const ResultCard = ({
       <div className="flex">
         <label className="flex-grow">
           <span
-            className={`flex-grow ${eliminated ? 'line-through' : ''}`}
+            className={`flex-grow ${
+              poll_type == 'ranked' && eliminated ? 'line-through' : ''
+            }`}
           >{`${label} `}</span>
           <i className="text-md font-light">
             {count != undefined
               ? `- ${count} vote${count === 1 ? '' : 's'}`
               : ''}
-            {eliminated ? 'Eliminated' : ''}
+            {poll_type == 'ranked' && eliminated ? 'Eliminated' : ''}
           </i>
         </label>
         <i

@@ -1,5 +1,5 @@
-import { relayInit, Event, getEventHash, nip04, Relay } from 'nostr-tools';
 import 'websocket-polyfill';
+import { relayInit, Event, getEventHash, nip04, Relay } from 'nostr-tools';
 import { bech32 } from 'bech32';
 import { z } from 'zod';
 
@@ -42,7 +42,7 @@ export const zod_event_poll = zod_event
   })
   .strict();
 
-export type Poll = z.infer<typeof zod_event_poll>;
+export type Poll = z.output<typeof zod_event_poll>;
 
 export const zod_event_sign_req = zod_event
   .extend({
@@ -220,49 +220,6 @@ export const getVoteReq = (
   }),
 });
 
-const defaultOptions = {
-  randomize: true,
-  percent: true,
-  secret: false,
-  show_creator: true,
-  modify_minutes: 0,
-};
-
-export const encodeOptions = ({
-  randomize,
-  percent,
-  secret,
-  show_creator,
-  modify_minutes,
-}: EventPollOptions) =>
-  '' + randomize
-    ? '1'
-    : '0' + '|' + percent
-    ? '1'
-    : '0' + '|' + secret
-    ? '1'
-    : '0' + '|' + show_creator
-    ? '1'
-    : '0' + '|' + modify_minutes;
-
-export const decodeOptions = (x: string) => {
-  const options = x.split('|');
-  const convert = (def: boolean | number, value: string) => {
-    switch (typeof def) {
-      case 'boolean':
-        return value == '1';
-      case 'number':
-        return parseInt(value);
-    }
-  };
-  return Object.fromEntries(
-    Object.entries(defaultOptions).map((d, i) => [
-      d[0],
-      convert(d[1], options[i]) ?? d[1],
-    ])
-  );
-};
-
 export const getPollEvent = (
   poll_id: string,
   relay_url: string
@@ -287,23 +244,73 @@ export const getPollEvent = (
       .catch((e) => console.error(e));
   });
 
+const e = (x: string) => x.replace('|', '\\~').replace('^', '\\,');
+const d = (x: string) => x.replace('\\~', '|').replace('\\,', '^');
+const encBool = (x?: boolean) => (x == undefined ? '' : x ? '1' : '0');
+const decBool = (x?: string) =>
+  x == undefined ? undefined : x === '' ? undefined : x === '1';
+const decString = (x?: string) =>
+  x == undefined ? undefined : x === '' ? undefined : x;
+const decNumber = (x?: string) =>
+  x == undefined ? undefined : x === '' ? undefined : parseInt(x);
+
+export const serializePoll = (poll: EventPollInfo) =>
+  `${e(poll.tally)}|${e(poll.sign)}|${e(poll.title)}|${poll.ends}|${poll.choices
+    .reduce((acc, choice) => `${acc}^${e(choice)}`, '')
+    .slice(1)}|${poll.options.type}|${poll.options.modify_minutes}|${encBool(
+    poll.options.percent
+  )}|${encBool(poll.options.randomize)}|${encBool(
+    poll.options.secret
+  )}|${encBool(poll.options.show_creator)}|${poll.options.show_results}`;
+
+export const deserializePoll = (content: string) => {
+  const x = content.split('|');
+  return {
+    tally: d(x[0]),
+    sign: d(x[1]),
+    title: d(x[2]),
+    ends: x[3],
+    choices: x[4].split('^').map(d),
+    options: {
+      type: decString(x[5]),
+      modify_minutes: decNumber(x[6]),
+      percent: decBool(x[7]),
+      randomize: decBool(x[8]),
+      secret: decBool(x[9]),
+      show_creator: decBool(x[10]),
+      show_results: decString(x[11]),
+    },
+  };
+};
+
 export const isValidPollEnd = (event_ends: string, created: number) => {
   const MAX_POLL_LENGTH_DAYS = 7;
   const ends = new Date(event_ends).getTime();
   return ends < created * 1000 + MAX_POLL_LENGTH_DAYS * 24 * 60 * 60 * 1000;
 };
 
-export const parsePollEvent = (event: Event) => {
-  if (event?.id == undefined) return undefined;
-  const content = JSON.parse(event.content);
-  // const options = decodeOptions(content.options);
-  const event_poll = { ...event, content: { ...content } };
-  const valid = zod_event_poll.safeParse(event_poll);
-  const valid_ends = isValidPollEnd(
-    event_poll.content.ends,
-    event_poll.created_at
-  );
-  if (!valid.success || !valid_ends) return undefined;
+export const isValidPollEvent = (event: Event) => {
+  try {
+    if (event?.id == undefined) return false;
+    const content = deserializePoll(event.content);
+    const event_poll = { ...event, content: { ...content } };
+    const valid = zod_event_poll.safeParse(event_poll);
+    const valid_ends = isValidPollEnd(
+      event_poll.content.ends,
+      event_poll.created_at
+    );
+    if (!valid.success || !valid_ends) return false;
+    return true;
+  } catch (ex) {
+    return false;
+  }
+};
+
+export const parsePollContent = (info: string) => {
+  if (info === '' || info == undefined) return undefined;
+  const content = deserializePoll(info);
+  const valid = zod_event_poll.shape.content.safeParse(content);
+  if (!valid.success) return undefined;
   return valid.data;
 };
 

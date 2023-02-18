@@ -5,7 +5,8 @@ import * as path from 'path';
 import { homedir } from 'os';
 import {
   getPollEvent,
-  parsePollEvent,
+  isValidPollEvent,
+  parsePollContent,
   zod_event_poll,
 } from '@votestr-libs/nostr';
 import { z } from 'zod';
@@ -20,7 +21,7 @@ const zod_poll = z.object({
   pubkey: z.string(),
 });
 
-export type Poll = z.infer<typeof zod_poll>;
+export type Poll = z.output<typeof zod_poll>;
 
 export const bigToBs58 = (big: any) => bs58.encode(big.toByteArray());
 export const bs58ToBig = (bs: string) => new BigInteger(bs58.decode(bs));
@@ -62,20 +63,23 @@ export const getBlindSignKeys = () => {
 };
 
 export const getOrFetchPollData = async (poll_id: string) => {
-  const poll = (await getPoll(poll_id)) as Poll;
-  if (poll) return poll;
-  const event = parsePollEvent(
-    await getPollEvent(
-      poll_id,
-      process.env.RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net'
-    )
+  const poll = await getPoll(poll_id);
+  const info = parsePollContent(poll?.info ?? '');
+  if (poll && info) return { ...poll, info };
+  const raw_event = await getPollEvent(
+    poll_id,
+    process.env.RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net'
   );
-  if (!event) {
+  const valid = isValidPollEvent(raw_event);
+  if (!valid) {
     throw new Error(`Poll id ${poll_id} not found`);
   }
-  if (event.content.sign !== `${DOMAIN}`) {
+  const info_new = parsePollContent(raw_event.content);
+  if (info_new?.sign !== `${DOMAIN}`) {
     throw new Error(`Poll id ${poll_id} sign domain mismatch`);
   }
-  await savePoll(event);
-  return await getPoll(poll_id);
+  await savePoll(raw_event, info_new.ends);
+  const poll_new = await getPoll(poll_id);
+  const info_newnew = parsePollContent(poll_new?.info ?? '');
+  return { ...poll_new, info: info_newnew } as Poll;
 };

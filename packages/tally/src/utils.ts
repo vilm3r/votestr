@@ -4,11 +4,12 @@ import * as path from 'path';
 import { z } from 'zod';
 import {
   getPollEvent,
-  parsePollEvent,
+  isValidPollEvent,
+  parsePollContent,
   zod_event_poll,
 } from '@votestr-libs/nostr';
 import { getPollPercent, intToBs58 } from '@votestr-libs/utils';
-import prisma from './prisma';
+import prisma, { getPoll, savePoll } from './prisma';
 
 export const fetchAuthPubkey = async (sign_url: string) =>
   await (
@@ -33,29 +34,60 @@ const zod_poll = z.object({
   pubkey_vote: z.string(),
 });
 
-export type Poll = z.infer<typeof zod_poll>;
+export type Poll = z.output<typeof zod_poll>;
 
 const DOMAIN = process.env.DOMAIN || 'tally.votestr.com';
 
+// export const getOrFetchPollData = async (poll_id: string) => {
+//   const poll = (await prisma.getPoll(poll_id)) as Poll;
+//   const info = zod_event_poll.shape.content.safeParse(poll?.info ?? '');
+//   if (poll && info.success) return { ...poll, info: info.data };
+//   const event = parsePollEvent(
+//     await getPollEvent(
+//       poll_id,
+//       process.env.RELAY_URL ?? 'wss://nostr-dev.wellorder.net'
+//     )
+//   );
+//   const pubkey_auth = await fetchAuthPubkey(event?.content?.sign ?? '');
+//   const pubkey_vote = await fetchVotePubkey(event?.content?.sign ?? '');
+//   if (!event || !pubkey_auth || !pubkey_vote) {
+//     throw new Error(`Poll id ${poll_id} not found`);
+//   }
+//   if (event.content.tally !== `${DOMAIN}`) {
+//     throw new Error(`Poll id ${poll_id} tally domain mismatch`);
+//   }
+//   await prisma.savePoll(event, pubkey_auth, pubkey_vote);
+//   const poll_new = (await prisma.getPoll(poll_id)) as Poll;
+//   const info_new = zod_event_poll.shape.content.safeParse(poll_new?.info ?? '');
+//   if (!info_new.success) throw new Error(`Bad deserialize on ${poll_id}`);
+//   return { ...poll_new, info: info_new.data };
+// };
+
 export const getOrFetchPollData = async (poll_id: string) => {
-  const poll = (await prisma.getPoll(poll_id)) as Poll;
-  if (poll) return poll;
-  const event = parsePollEvent(
-    await getPollEvent(
-      poll_id,
-      process.env.RELAY_URL ?? 'wss://nostr-dev.wellorder.net'
-    )
+  const poll = await getPoll(poll_id);
+  const info = parsePollContent(poll?.info ?? '');
+  if (poll && info) return { ...poll, info };
+  const raw_event = await getPollEvent(
+    poll_id,
+    process.env.RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net'
   );
-  const pubkey_auth = await fetchAuthPubkey(event?.content?.sign ?? '');
-  const pubkey_vote = await fetchVotePubkey(event?.content?.sign ?? '');
-  if (!event || !pubkey_auth || !pubkey_vote) {
-    throw new Error(`Poll id ${poll_id} not found`);
+  const valid = isValidPollEvent(raw_event);
+  if (!valid) {
+    throw new Error(`Poll id ${poll_id} event not found`);
   }
-  if (event.content.tally !== `${DOMAIN}`) {
+  const info_new = parsePollContent(raw_event.content);
+  const pubkey_auth = await fetchAuthPubkey(info_new?.sign ?? '');
+  const pubkey_vote = await fetchVotePubkey(info_new?.sign ?? '');
+  if (!pubkey_auth || !pubkey_vote) {
+    throw new Error(`Poll id ${poll_id} keys not found`);
+  }
+  if (info_new?.tally !== `${DOMAIN}`) {
     throw new Error(`Poll id ${poll_id} tally domain mismatch`);
   }
-  await prisma.savePoll(event, pubkey_auth, pubkey_vote);
-  return await prisma.getPoll(poll_id);
+  await savePoll(raw_event, info_new.ends, pubkey_auth, pubkey_vote);
+  const poll_new = await getPoll(poll_id);
+  const info_newnew = parsePollContent(poll_new?.info ?? '');
+  return { ...poll_new, info: info_newnew } as Poll;
 };
 
 const base58_regex = /([1-9a-zA-Z][^OIl])*/;

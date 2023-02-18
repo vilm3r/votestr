@@ -1,5 +1,6 @@
 import {
   bech32ToHex,
+  deserializePoll,
   EventPoll,
   getAuthPayloadReq,
   getAuthSignReq,
@@ -8,8 +9,9 @@ import {
   getPollEvent,
   getVoteReq,
   getVoteResultsReq,
+  isValidPollEvent,
   parseCreator,
-  parsePollEvent,
+  zod_event_poll,
 } from '@votestr-libs/nostr';
 import { bigToBs58, bs58ToBig, timeout } from '@votestr-libs/utils';
 import 'websocket-polyfill';
@@ -96,13 +98,18 @@ export const getServerSideProps: any = async (
 ) => {
   const relay_url =
     process.env.NEXT_PUBLIC_RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net';
-  const poll = parsePollEvent(
-    await getPollEvent(bech32ToHex(ctx.params?.id), relay_url)
-  );
+  const raw_event = await getPollEvent(bech32ToHex(ctx.params?.id), relay_url);
+  const is_valid = isValidPollEvent(raw_event);
+  const poll_check = zod_event_poll.safeParse({
+    ...raw_event,
+    content: deserializePoll(raw_event?.content),
+  });
+  if (!is_valid || !poll_check.success) return { props: {} };
+  const poll = poll_check.data;
   const creator = poll
     ? await parseCreator(
-        await getPollCreator(poll?.pubkey ?? '', relay_url),
-        poll.pubkey
+        await getPollCreator(raw_event.pubkey ?? '', relay_url),
+        raw_event.pubkey
       )
     : undefined;
   const cache_age = poll ? 3600 : 0;
@@ -111,7 +118,7 @@ export const getServerSideProps: any = async (
     `s-maxage=${cache_age}, stale-while-revalidate=${cache_age}`
   );
   const props = {
-    ...(poll?.id && { poll }),
+    poll,
     ...(creator?.pubkey && { creator }),
   };
   return { props };
@@ -183,6 +190,24 @@ export function PollPage({ poll, creator }: PollPageProps) {
   const [pub, setPub] = useState<string | undefined>();
 
   useEffect(() => {
+    let interval = null as any;
+    interval = setInterval(() => {
+      if (
+        page_state !== 'results' &&
+        Date.now() > new Date(poll.content.ends).getTime()
+      ) {
+        getVote(poll.id, poll.content.tally)
+          .then((results) => {
+            setTallyData((_) => results);
+            setPageState('results');
+          })
+          .catch(() => {});
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [poll, page_state]);
+
+  useEffect(() => {
     getVote(poll.id, poll.content.tally)
       .then((results) => {
         setTallyData((_) => results);
@@ -202,7 +227,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
         }
         // grab results while fetching
         case hasPollEnded(poll): {
-          return setPageState('results');
+          setPageState('results');
         }
         // get pubkey to trigger auth flow
         default: {
@@ -462,7 +487,8 @@ export function PollPage({ poll, creator }: PollPageProps) {
                 onClickVote={(choice: string) => clickVote(choice)}
                 onClickResults={() =>
                   setPageState(
-                    poll.content.options.show_results === 'after-vote'
+                    poll.content.options.show_results === 'after-vote' &&
+                      tally_data?.choice === undefined
                       ? 'forfeit'
                       : 'results'
                   )
@@ -489,7 +515,8 @@ export function PollPage({ poll, creator }: PollPageProps) {
                 onClickVote={(choice: string) => clickVote(choice)}
                 onClickResults={() =>
                   setPageState(
-                    poll.content.options.show_results === 'after-vote'
+                    poll.content.options.show_results === 'after-vote' &&
+                      tally_data?.choice === undefined
                       ? 'forfeit'
                       : 'results'
                   )

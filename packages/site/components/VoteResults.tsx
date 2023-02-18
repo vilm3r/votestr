@@ -1,10 +1,9 @@
 import { bs58ToInt, getLocalString, getPollPercent } from '@votestr-libs/utils';
 import { EventPoll } from '@votestr-libs/nostr';
 import { TallyDataType } from '../pages/p/[id]';
-import Button from './Button';
 import ResultCard from './ResultCard';
 import RevoteButton from './RevoteButton';
-import { ReactElement, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type VoteResultsRankedProps = {
   poll: EventPoll;
@@ -19,7 +18,9 @@ const VoteResultsRanked = ({
   pub,
   onClickRevote,
 }: VoteResultsRankedProps) => {
-  const [ended, setEnded] = useState(false);
+  const [ended, setEnded] = useState(
+    Date.now() > new Date(poll.content.ends).getTime()
+  );
 
   useEffect(() => {
     let interval = null as any;
@@ -97,6 +98,8 @@ const VoteResultsRanked = ({
           label={x.choice}
           percent={x.percent}
           count={x.votes}
+          choice={tally_data.choice === x.num}
+          poll_type={poll.content.options.type}
           eliminated={ended && (tally_data.results as any)[x.num] === 0}
         />
       ))}
