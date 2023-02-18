@@ -287,7 +287,11 @@ export const deserializePoll = (content: string) => {
   }
 };
 
-export const isValidPollEnd = (event_ends: string, created: number) => {
+export const isValidPollEnd = (
+  event_ends: string | undefined,
+  created: number
+) => {
+  if (event_ends == undefined) return false;
   const MAX_POLL_LENGTH_DAYS = 7;
   const ends = new Date(event_ends).getTime();
   return ends < created * 1000 + MAX_POLL_LENGTH_DAYS * 24 * 60 * 60 * 1000;
