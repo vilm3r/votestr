@@ -158,51 +158,37 @@ export const updateCachedResults = (poll_id: string, results: string) =>
   });
 
 export const getRunningPolls = () =>
-  prisma.poll
-    .findMany({
-      select: {
-        id: true,
-        info: true,
-        ends: true,
-        results: true,
+  prisma.poll.findMany({
+    select: {
+      id: true,
+      info: true,
+      ends: true,
+      results: true,
+    },
+    where: {
+      ends: {
+        gte: new Date().toISOString(),
       },
-      where: {
-        ends: {
-          gte: new Date().toISOString(),
-        },
-      },
-    })
-    .then((polls) =>
-      polls.map((poll) => ({
-        ...poll,
-        info: JSON.parse(poll.info) as EventPollInfo,
-      }))
-    );
+    },
+  });
 
 export const getArchivablePolls = () =>
-  prisma.poll
-    .findMany({
-      select: {
-        id: true,
-        info: true,
-        ends: true,
-        pubkey_vote: true,
+  prisma.poll.findMany({
+    select: {
+      id: true,
+      info: true,
+      ends: true,
+      pubkey_vote: true,
+    },
+    where: {
+      ends: {
+        lte: new Date().toISOString(),
       },
-      where: {
-        ends: {
-          lte: new Date().toISOString(),
-        },
-        archived: {
-          equals: false,
-        },
+      archived: {
+        equals: false,
       },
-    })
-    .then((polls) =>
-      polls.map((poll) => ({
-        ...poll,
-        info: JSON.parse(poll.info) as EventPollInfo,
-      }))
-    );
+    },
+  });
 
 export const archivePoll = (poll_id: string) =>
   prisma.poll.update({
@@ -227,13 +213,14 @@ export const pruneVoteData = (poll_id: string) =>
   });
 
 export const prunePollData = (poll_id: string) =>
-  prisma.vote.updateMany({
+  prisma.poll.updateMany({
     data: {
-      unblinded_vote: undefined,
-      timestamp: undefined,
+      pubkey: undefined,
+      pubkey_auth: undefined,
+      pubkey_vote: undefined,
     },
     where: {
-      poll_id,
+      id: poll_id,
     },
   });
 

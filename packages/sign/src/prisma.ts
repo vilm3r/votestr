@@ -52,28 +52,21 @@ export const savePoll = (poll: Event, ends: string) =>
   });
 
 export const getArchivablePolls = () =>
-  prisma.poll
-    .findMany({
-      select: {
-        id: true,
-        info: true,
-        ends: true,
+  prisma.poll.findMany({
+    select: {
+      id: true,
+      info: true,
+      ends: true,
+    },
+    where: {
+      ends: {
+        lte: new Date().toISOString(),
       },
-      where: {
-        ends: {
-          lte: new Date().toISOString(),
-        },
-        archived: {
-          equals: false,
-        },
+      archived: {
+        equals: false,
       },
-    })
-    .then((polls) =>
-      polls.map((poll) => ({
-        ...poll,
-        info: JSON.parse(poll.info) as EventPollInfo,
-      }))
-    );
+    },
+  });
 
 export const prunePollData = (poll_id: string) =>
   prisma.poll.updateMany({

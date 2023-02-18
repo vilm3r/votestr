@@ -1,3 +1,4 @@
+import { deserializePoll, parsePollContent } from '@votestr-libs/nostr';
 import * as cron from 'node-cron';
 import {
   getRunningPolls,
@@ -17,20 +18,22 @@ import {
 
 const updateCached = async (poll: any) => {
   const votes = await getVotes(poll.id);
-  const tmp = calculatePollResults(poll.info.options.type, votes);
+  const poll_info = parsePollContent(poll.info);
+  if (poll_info == undefined) return;
+  const tmp = calculatePollResults(poll_info.options.type, votes);
   const results = formatPollResults(
     tmp.results,
-    poll.info.choices,
+    poll_info.choices,
     tmp.total,
-    poll.info.options.percent
+    poll_info.options.percent
   );
   const first_round = tmp.first_round
     ? {
         first_round: formatPollResults(
           tmp.first_round,
-          poll.info.choices,
+          poll_info.choices,
           tmp.total,
-          poll.info.options.percent
+          poll_info.options.percent
         ),
       }
     : {};
