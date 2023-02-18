@@ -40,9 +40,12 @@ const getPollEnd = (days: number) =>
 //   new Date(Date.now() + minutes * 60 * 1000).toISOString();
 
 const waitForNostr = async (wait: number): Promise<void> => {
-  if ((window as any).nostr || wait === 0) return;
+  if ((window as any).nostr || wait === 0) {
+    await timeout(500); // wait for Alby to initialize because my page is too fast :P
+    return;
+  }
   await timeout(50);
-  return await waitForNostr(wait - 50);
+  return waitForNostr(wait - 50);
 };
 
 const hasErrors = (zod: any, keys: (string | number)[]) =>
