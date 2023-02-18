@@ -14,14 +14,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        vote0: '#08F7FE',
+        vote0: '#FF6666',
         vote1: '#09FBD3',
         vote2: '#FE53BB',
         vote3: '#F5D300',
         vote4: '#560A86',
         vote5: '#FF2281',
         vote6: '#011FFD',
-        vote7: '#00FECA',
+        vote7: '#9ACD32',
         vote8: '#13CA91',
         vote9: '#FF9472',
         vote10: '#75D5FD',
