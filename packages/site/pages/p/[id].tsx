@@ -100,7 +100,9 @@ export const getServerSideProps: any = async (
     process.env.NEXT_PUBLIC_RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net';
   try {
     const raw_event = await getPollEvent(
-      bech32ToHex(ctx.params?.id),
+      ctx.params?.id.startsWith('note')
+        ? bech32ToHex(ctx.params?.id)
+        : ctx.params?.id,
       relay_url
     );
     const is_valid = isValidPollEvent(raw_event);
