@@ -264,23 +264,27 @@ export const serializePoll = (poll: EventPollInfo) =>
   )}|${encBool(poll.options.show_creator)}|${poll.options.show_results}`;
 
 export const deserializePoll = (content: string) => {
-  const x = content.split('|');
-  return {
-    tally: d(x[0]),
-    sign: d(x[1]),
-    title: d(x[2]),
-    ends: x[3],
-    choices: x[4].split('^').map(d),
-    options: {
-      type: decString(x[5]),
-      modify_minutes: decNumber(x[6]),
-      percent: decBool(x[7]),
-      randomize: decBool(x[8]),
-      secret: decBool(x[9]),
-      show_creator: decBool(x[10]),
-      show_results: decString(x[11]),
-    },
-  };
+  try {
+    const x = content.split('|');
+    return {
+      tally: d(x[0]),
+      sign: d(x[1]),
+      title: d(x[2]),
+      ends: x[3],
+      choices: x[4].split('^').map(d),
+      options: {
+        type: decString(x[5]),
+        modify_minutes: decNumber(x[6]),
+        percent: decBool(x[7]),
+        randomize: decBool(x[8]),
+        secret: decBool(x[9]),
+        show_creator: decBool(x[10]),
+        show_results: decString(x[11]),
+      },
+    };
+  } catch (ex) {
+    return undefined;
+  }
 };
 
 export const isValidPollEnd = (event_ends: string, created: number) => {
