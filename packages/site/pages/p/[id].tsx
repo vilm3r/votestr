@@ -150,9 +150,12 @@ const DynamicVoteChoiceSimple = dynamic(
 );
 
 const waitForNostr = async (wait: number): Promise<void> => {
-  if ((window as any).nostr || wait === 0) return;
+  if ((window as any).nostr || wait === 0) {
+    await timeout(100); // wait for Alby to initialize because my page is too fast :P
+    return;
+  }
   await timeout(50);
-  return await waitForNostr(wait - 50);
+  return waitForNostr(wait - 50);
 };
 
 export const hasPollEnded = (poll: EventPoll) =>
@@ -224,7 +227,7 @@ export function PollPage({ poll, creator }: PollPageProps) {
       .catch(() => {});
     (async () => {
       setPageState('loading');
-      hasPollEnded(poll) ? await waitForNostr(300) : await waitForNostr(300);
+      await waitForNostr(hasPollEnded(poll) ? 300 : 500);
       switch (true) {
         // prompt user to install extension
         case !(window as any).nostr && !hasPollEnded(poll): {
@@ -245,8 +248,12 @@ export function PollPage({ poll, creator }: PollPageProps) {
           } catch (ex) {
             // suppress error in case nos2x
           }
-          const pubkey = await (window as any).nostr.getPublicKey();
-          setPub(pubkey);
+          try {
+            const pubkey = await (window as any).nostr.getPublicKey();
+            setPub(pubkey);
+          } catch (ex) {
+            setPageState('extension');
+          }
         }
       }
     })();
