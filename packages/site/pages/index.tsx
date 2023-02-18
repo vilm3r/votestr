@@ -296,7 +296,7 @@ export function Index({ config }: IndexProps) {
           />
         </div>
         <Accordian>
-          <AccordianItem id="1" content_size="700px">
+          <AccordianItem id="1" content_size="900px">
             <AccordianSummary
               expand_icon={<ExpandMoreIcon className="text-3xl" />}
             >
