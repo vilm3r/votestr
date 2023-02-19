@@ -9,6 +9,7 @@ import {
   getPollEvent,
   getVoteReq,
   getVoteResultsReq,
+  hexToBech32,
   isValidPollEvent,
   parseCreator,
   zod_event_poll,
@@ -111,6 +112,13 @@ export const getServerSideProps: any = async (
       content: deserializePoll(raw_event?.content),
     });
     if (!is_valid || !poll_check.success) return { props: {} };
+    if (!ctx.params?.id.startsWith('note'))
+      return {
+        redirect: {
+          destination: `/p/${hexToBech32(ctx.params?.id, 'note')}`,
+          permanent: true,
+        },
+      };
     const poll = poll_check.data;
     const creator = poll
       ? await parseCreator(
