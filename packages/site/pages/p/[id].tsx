@@ -118,11 +118,8 @@ export const getServerSideProps: any = async (
           raw_event.pubkey
         )
       : undefined;
-    const cache_age = poll ? 3600 : 0;
-    ctx.res.setHeader(
-      'Cache-Control',
-      `s-maxage=${cache_age}, stale-while-revalidate=${cache_age}`
-    );
+    const cache_age = poll ? 604800 : 0;
+    ctx.res.setHeader('Cache-Control', `s-maxage=${cache_age}`);
     const props = {
       poll,
       ...(creator?.pubkey && { creator }),
