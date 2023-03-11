@@ -94,28 +94,29 @@ const getSignVotePubkey = async (sign: string) =>
     ).text()
   );
 
+  const uriToHex = (id: string) => {
+    if(id.startsWith('note')) return bech32ToHex(id);
+    if(id.length === 59) return bech32ToHex(`note${id}`);
+    return id;
+  }
+
 export const getServerSideProps: any = async (
   ctx: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
   const relay_url =
     process.env.NEXT_PUBLIC_RELAY_ENDPOINT ?? 'wss://nostr-dev.wellorder.net';
   try {
-    const raw_event = await getPollEvent(
-      ctx.params?.id.startsWith('note')
-        ? bech32ToHex(ctx.params?.id)
-        : ctx.params?.id,
-      relay_url
-    );
+    const raw_event = await getPollEvent(uriToHex(ctx.params?.id), relay_url);
     const is_valid = isValidPollEvent(raw_event);
     const poll_check = zod_event_poll.safeParse({
       ...raw_event,
       content: deserializePoll(raw_event?.content),
     });
     if (!is_valid || !poll_check.success) return { props: {} };
-    if (!ctx.params?.id.startsWith('note'))
+    if (ctx.params?.id.length !== 59)
       return {
         redirect: {
-          destination: `/p/${hexToBech32(ctx.params?.id, 'note')}`,
+          destination: ctx.params?.id.startsWith('note') ? `/p/${ctx.params?.id.slice(4)}` : `/p/${hexToBech32(ctx.params?.id, 'note')}`,
           permanent: true,
         },
       };

@@ -167,7 +167,7 @@ export function Index({ config }: IndexProps) {
       ...event,
       content: serializePoll(event.content),
     });
-    router.push(`/p/${hexToBech32(id, 'note')}`);
+    router.push(`/p/${hexToBech32(id, 'note').slice(4)}`);
   }
 
   type FlipOptions = Exclude<
